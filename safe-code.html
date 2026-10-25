@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="uk">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<meta name="theme-color" content="#0b0d12" />
+<title>Сейф — код доступу</title>
+<style>
+:root{color-scheme:dark;--bg:#0b0d12;--txt:#f1f1f1;--muted:#858993;--red:#e2505d}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{min-height:100svh;margin:0;background:radial-gradient(ellipse at 50% 25%,#202530 0%,#10131a 46%,#090a0e 100%);font:16px/1.45 system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:var(--txt);display:grid;place-items:center;padding:24px 16px;overflow-x:hidden}
+body:before{content:"";pointer-events:none;position:fixed;inset:0;opacity:.16;background:repeating-linear-gradient(0deg,transparent 0px,transparent 3px,#000 4px);mix-blend-mode:multiply}
+.shell{position:relative;width:min(100%,390px);text-align:center}
+.emblem{font-size:29px;opacity:.68;margin-bottom:12px}.eyebrow{color:#9499a5;font-size:11px;letter-spacing:.34em;text-transform:uppercase;margin:0 0 9px}
+h1{font-size:clamp(28px,8vw,39px);line-height:1.1;font-weight:580;letter-spacing:.02em;margin:0 0 11px}
+.sub{font-size:14px;color:#a3a6af;margin:0 0 31px}.display{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:9px;margin-bottom:10px}
+.slot{height:clamp(57px,16vw,69px);display:grid;place-items:center;font-size:30px;font-weight:560;border:1px solid #414652;border-radius:12px;background:linear-gradient(165deg,#252a34,#161921);box-shadow:inset 0 1px 0 #ffffff0d;transition:background .14s,border-color .14s,transform .14s}
+.slot.red{border-color:#8c3842;background:linear-gradient(165deg,#44232c,#27161c);color:#ff9ba5}.slot.current{border-color:#e3e7ee;box-shadow:0 0 0 1px #ffffff15}.slot.red.current{border-color:#ff7c88}
+.hint{margin:4px 0 21px;font-size:11px;color:#858995;letter-spacing:.06em}.hint strong{color:#e77b87;font-weight:500}
+.pad{width:min(100%,310px);margin:0 auto;display:grid;grid-template-columns:repeat(3,1fr);gap:11px}
+.key{height:63px;border:1px solid #353a45;border-radius:13px;background:#1a1e27;color:#eceef4;font:500 25px system-ui;cursor:pointer;touch-action:manipulation;box-shadow:0 3px 0 #080a0e}.key:active{transform:translateY(2px);box-shadow:0 1px 0 #080a0e;background:#2c323f}.key.special{font-size:21px;color:#a2a7b4}.key.enter{background:#353e48;font-size:21px;color:#f3f6fa}.key:disabled{opacity:.45;cursor:default}
+.feedback{min-height:28px;margin:21px auto 0;font-size:13px;color:#b8bdc6}.feedback.error{color:#ef919a}
+.messages{display:grid;gap:10px;margin-top:12px}.message{padding:12px 13px;border:1px solid #723642;background:#331b23b0;border-radius:11px;color:#f7c7cc;font-size:13px;line-height:1.55;animation:appear .35s ease both}
+.attempts{font-size:11px;color:#606672;letter-spacing:.1em;margin:15px 0 0}.shake{animation:shake .32s ease}
+.success{display:none;min-height:530px;align-content:center;justify-items:center;animation:appear 1s ease}.success .symbol{font-size:55px;color:#b9d1bc;margin-bottom:22px}.success h2{font-size:clamp(29px,8vw,39px);line-height:1.2;font-weight:500;letter-spacing:.015em;margin:0 0 18px}.success p{color:#aab0bb;font-size:14px}.success button{margin-top:25px;background:transparent;border:1px solid #505862;color:#d5dae4;border-radius:12px;padding:13px 22px;font:inherit;cursor:pointer}
+@keyframes appear{from{opacity:0;transform:translateY(9px)}to{opacity:1;transform:translateY(0)}}@keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-5px)}50%{transform:translateX(5px)}75%{transform:translateX(-3px)}}
+@media(prefers-reduced-motion:reduce){*,*:before,*:after{animation-duration:.01ms!important;transition:none!important}}
+</style>
+</head>
+<body>
+<main class="shell">
+<section id="lockScreen">
+<div class="emblem" aria-hidden="true">◇</div><p class="eyebrow">Доступ обмежено</p><h1>КОД СЕЙФУ</h1><p class="sub">П'ять цифр відділяють тебе від наступної гри.</p>
+<div id="display" class="display" role="group" aria-label="Введений код із п'яти цифр"></div>
+<p class="hint">Останні <strong>дві комірки</strong> — особливі</p>
+<div class="pad" aria-label="Цифрова клавіатура">
+<button class="key" data-num="1">1</button><button class="key" data-num="2">2</button><button class="key" data-num="3">3</button>
+<button class="key" data-num="4">4</button><button class="key" data-num="5">5</button><button class="key" data-num="6">6</button>
+<button class="key" data-num="7">7</button><button class="key" data-num="8">8</button><button class="key" data-num="9">9</button>
+<button class="key special" id="back" aria-label="Стерти останню цифру">⌫</button><button class="key" data-num="0">0</button><button class="key enter" id="enter" aria-label="Перевірити код">↵</button>
+</div>
+<div id="feedback" class="feedback" role="status" aria-live="polite">Введи код і натисни ↵</div><div id="messages" class="messages" aria-live="polite"></div><p id="attempts" class="attempts">СПРОБ: 0</p>
+</section>
+<section id="success" class="success" aria-live="polite"><div class="symbol">✧</div><p class="eyebrow">Сейф відчинено</p><h2>Пограємо в<br>«Спекотно / холодно»?</h2><p>Тепер починається справжня гра.</p></section>
+</main>
+<script>
+(()=>{'use strict';
+const PASSWORD='35789', MAX=5;
+let value='',wrong=0,wrongEnd=0,unlocked=false,ctx=null;
+const $=id=>document.getElementById(id);
+const display=$('display'),feedback=$('feedback'),messages=$('messages');
+const cells=[];
+for(let i=0;i<MAX;i++){const el=document.createElement('div');el.className='slot'+(i>=3?' red':'');el.setAttribute('aria-label',`Цифра ${i+1}`);display.append(el);cells.push(el)}
+function draw(){cells.forEach((el,i)=>{el.textContent=value[i]??'·';el.classList.toggle('current',i===value.length&&value.length<MAX);el.setAttribute('aria-label',`Цифра ${i+1}: ${value[i]??'порожньо'}`)})}
+function tone(f,start,duration,type='sine',vol=.1){if(!ctx)return;let osc=ctx.createOscillator(),gain=ctx.createGain();osc.type=type;osc.frequency.setValueAtTime(f,start);gain.gain.setValueAtTime(.0001,start);gain.gain.exponentialRampToValueAtTime(Math.max(.0002,vol),start+.02);gain.gain.exponentialRampToValueAtTime(.0001,start+duration);osc.connect(gain).connect(ctx.destination);osc.start(start);osc.stop(start+duration+.02)}
+function audio(){try{ctx??=new (window.AudioContext||window.webkitAudioContext)();if(ctx.state==='suspended')ctx.resume()}catch(e){ctx=null}}
+// A gentle, slightly unsettling three-second melody after every wrong code.
+// Quiet notes and an airy low drone, synthesized locally (no audio files needed).
+function eerie(){
+ audio();if(!ctx)return;
+ const t=ctx.currentTime+.03;
+ const notes=[[329.63,0,.43],[311.13,.46,.43],[261.63,.93,.58],[246.94,1.58,.55],[207.65,2.22,.72]];
+ tone(130.81,t,2.85,'sine',.020);
+ tone(138.59,t+.12,2.50,'sine',.010);
+ for(const [f,offset,d] of notes){
+  tone(f,t+offset,d,'sine',.047);
+  tone(f*2,t+offset+.04,Math.min(d,.4),'sine',.009);
+ }
+}
+// Opening phrase of Beethoven's Für Elise, played with Web Audio so it works offline.
+const melody=[['E5',.18],['D#5',.18],['E5',.18],['D#5',.18],['E5',.18],['B4',.18],['D5',.18],['C5',.18],['A4',.45],['C4',.19],['E4',.19],['A4',.19],['B4',.44],['E4',.19],['G#4',.19],['B4',.19],['C5',.43],['E4',.19],['E5',.19],['D#5',.19],['E5',.19],['D#5',.19],['E5',.19],['B4',.19],['D5',.19],['C5',.19],['A4',.55],['C4',.20],['E4',.20],['A4',.20],['B4',.46],['E4',.20],['C5',.20],['B4',.20],['A4',.54],['E5',.20],['D#5',.20],['E5',.20],['D#5',.20],['E5',.20],['B4',.20],['D5',.20],['C5',.20],['A4',.80]];
+const semitone={C:0,'C#':1,D:2,'D#':3,E:4,F:5,'F#':6,G:7,'G#':8,A:9,'A#':10,B:11};
+function frequency(note){const m=note.match(/^([A-G]#?)(\d)$/),midi=(Number(m[2])+1)*12+semitone[m[1]];return 440*Math.pow(2,(midi-69)/12)}
+let musicEnd=0;
+function triumph(){audio();if(!ctx)return;let t=Math.max(ctx.currentTime+.08,musicEnd+.1);for(const[n,d]of melody){tone(frequency(n),t,d*.92,'sine',.12);tone(frequency(n)/2,t,d*.88,'triangle',.022);t+=d}musicEnd=t}
+function appendDigit(d){if(unlocked||value.length===MAX)return;value+=d;feedback.textContent=value.length===MAX?'Натисни ↵, щоб перевірити код':'Введи код і натисни ↵';feedback.className='feedback';draw()}
+function erase(){if(unlocked)return;value=value.slice(0,-1);feedback.textContent='Введи код і натисни ↵';feedback.className='feedback';draw()}
+function message(text){const el=document.createElement('div');el.className='message';el.textContent=text;messages.append(el)}
+function check(){if(unlocked)return;if(value.length!==MAX){feedback.textContent='Потрібно ввести рівно 5 цифр';feedback.className='feedback error';return}
+if(value===PASSWORD){unlocked=true;$('lockScreen').style.display='none';$('success').style.display='grid';triumph();return}
+wrong++;if(value.slice(-2)!=='89')wrongEnd++;
+$('attempts').textContent=`СПРОБ: ${wrong}`;feedback.textContent='Неправильний код. Спробуй ще.';feedback.className='feedback error';
+messages.replaceChildren();if(wrong>=3)message('Подумай про звичайний порядок цифр, інакше поблажок більше не буде!');if(wrongEnd>=3)message('Тобі краще згадати номер квартири, в якій ти знаходишся, інакше вона згадає про тебе');
+display.classList.remove('shake');void display.offsetWidth;display.classList.add('shake');eerie();value='';draw();}
+document.querySelectorAll('[data-num]').forEach(b=>b.addEventListener('click',()=>appendDigit(b.dataset.num)));
+$('back').addEventListener('click',erase);$('enter').addEventListener('click',check);
+document.addEventListener('keydown',e=>{if(e.key>='0'&&e.key<='9')appendDigit(e.key);else if(e.key==='Backspace')erase();else if(e.key==='Enter')check()});draw();
+})();
+</script>
+</body>
+</html>
